@@ -517,7 +517,6 @@ void CMultithreading::ShowCallOnce(bool bIsThreadExecute /* = true */)
 
 	std::condition_variable condvarTest;
 	condvarTest.notify_one();
-
 }
 
 
@@ -563,8 +562,7 @@ int main()
 	// 单例模式的call_once
 	pThread->ShowCallOnce(false);
 
-
-
+	
 
 
 

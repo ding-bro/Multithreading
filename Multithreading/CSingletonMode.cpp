@@ -29,8 +29,7 @@ CSingletonMode* CSingletonMode::getStatic()
 #else
 	if (s_pSignle == nullptr)
 	{
-		unique_lock<std::mutex>unLock(g_Mutex);
-
+		// 如果只判断一次的话，两个线程同时执行到此处，可能会构造成两个对象，无法保证返回的是同一个对象
 		s_pSignle = new CSingletonMode();
 
 		// 声明一个内部类对象
