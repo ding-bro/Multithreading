@@ -289,7 +289,7 @@ void CMultithreading::Unique_lockInsert(string strParam)
 			this->m_mutext.lock(); // 使用了adopt_lock如果没有提前加锁，会报出异常
 			unique_lock<mutex>uniqlock(m_mutext, std::adopt_lock);
 
-			// 线程睡眠 与QT的 Qthread::sleep异曲同工
+			// 时间延时- 线程睡眠 与QT的 Qthread::sleep异曲同工
 			std::chrono::seconds chTime(1);
 			std::this_thread::sleep_for(chTime);
 
@@ -467,11 +467,13 @@ void CMultithreading::SingletonFunction(string strParam)
 {
 	if ("Static" == strParam)
 	{
+		// 双重检查锁
 		CSingletonMode* pSingle = CSingletonMode::getStatic();
 		pSingle->FunctionTest();
 	}
 	else if ("CallOnce" == strParam)
 	{
+		// 利用std::call_once 实现只让一个线程调用，其他线程阻塞
 		CSingletonMode* pSingle = CSingletonMode::getCallOnce();
 		pSingle->FunctionTest();
 	}
@@ -481,15 +483,18 @@ void CMultithreading::SingletonModel(bool bIsThreadExecute /*= true*/)
 {
 	if (bIsThreadExecute)
 	{
-		// 同一个对象
-		CSingletonMode* pSingleOne = CSingletonMode::getStatic();
-		CSingletonMode* pSingleTwo = CSingletonMode::getStatic();
-
 		std::thread thOne(&CMultithreading::SingletonFunction, this, "Static");
 		std::thread thTwo(&CMultithreading::SingletonFunction, this, "Static");
 
 		thOne.join();
 		thTwo.join();
+
+		// 除了双重检查锁和std::call_once
+		// 可以直接创建一个静态函数，delete掉静态指针
+		if (CSingletonMode::s_pSignle != nullptr)
+		{
+			CSingletonMode::destroyStatic();
+		}
 
 		// 错误的回收机制
 #ifdef ERRORRECYCLE
@@ -514,10 +519,65 @@ void CMultithreading::ShowCallOnce(bool bIsThreadExecute /* = true */)
 		thOne.join();
 		thTwo.join();
 	}
-
-	std::condition_variable condvarTest;
-	condvarTest.notify_one();
 }
+
+void CMultithreading::ShowConditionVariable_Pushback()
+{
+	this->m_vctValue.clear();
+
+	for (int i = 0; i < 1000; i++)
+	{
+		std::unique_lock<std::mutex>unLock(this->m_OneMutex);
+
+		this->m_vctValue.push_back(i);
+
+		this->m_ConVariable.notify_one();
+	}
+}
+
+#define CONDITIONVARIABLEERROR
+
+bool ShowConditionVariable_bool()
+{
+	return true;
+}
+
+void CMultithreading::ShowConditionVariable_Takeout()
+{
+	std::unique_lock<std::mutex>unLock(this->m_OneMutex);
+
+	// std::condition_variable，第一个参数是unique_lock，第二个参数是函数指针或lambda
+	// 达到令线程阻塞的效果
+
+#ifdef CONDITIONVARIABLEERROR
+	this->m_ConVariable.wait(unLock, [=] {
+		if (this->m_vctValue.size() < 1000)
+		{
+			return false;
+		}
+
+		return true;
+	});
+#else
+	this->m_ConVariable.wait(unLock,ShowConditionVariable_bool);
+#endif
+
+	std::cout << "finish" << endl;
+	std::cout << this->m_vctValue.at(999) << endl;
+}
+
+void CMultithreading::ShowConditionVariable(bool bIsThreadExecute /* = true */)
+{
+	if (bIsThreadExecute)
+	{
+		std::thread thOne(&CMultithreading::ShowConditionVariable_Pushback,this);
+		std::thread thTwo(&CMultithreading::ShowConditionVariable_Takeout,this);
+
+		thOne.join();
+		thTwo.join();
+	}
+}
+
 
 
 void FunctionTransfer(void(*Function)(int), int iOne)
@@ -562,6 +622,9 @@ int main()
 	// 单例模式的call_once
 	pThread->ShowCallOnce(false);
 
+	// 多线程条件变量的使用 std::condition_variable
+	pThread->ShowConditionVariable();
+	
 	
 
 

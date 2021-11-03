@@ -63,16 +63,22 @@ public:
 
 	void ShowCallOnce(bool bIsThreadExecute = true);
 
+	void ShowConditionVariable_Pushback();
+	void ShowConditionVariable_Takeout();
+	void ShowConditionVariable(bool bIsThreadExecute = true);
+
 
 
 
 public:
 	CMultithreading* pMulthread;
-	std::thread m_thTest;
-	string m_strValue;
 
-	list<int>m_listValue;
 	std::mutex m_mutext;
 	std::mutex m_OneMutex;
 	std::mutex m_TwoMutex;
+
+	std::condition_variable m_ConVariable;
+
+	list<int>m_listValue;
+	vector<int>m_vctValue;
 };

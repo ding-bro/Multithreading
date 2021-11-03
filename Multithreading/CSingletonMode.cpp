@@ -44,6 +44,15 @@ CSingletonMode* CSingletonMode::getStatic()
 	return s_pSignle;
 }
 
+void CSingletonMode::destroyStatic()
+{
+	if (s_pSignle != nullptr)
+	{
+		delete s_pSignle;
+		s_pSignle = nullptr;
+	}
+}
+
 void CSingletonMode::RunCallOnce()
 {
 	cout << "ÒÑÖ´ÐÐcall_once" << endl;
