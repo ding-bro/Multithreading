@@ -48,9 +48,9 @@ public:
 	// 使用静态成员函数的方式调用
 	static CSingletonMode* getStatic();
 
-	static void destroyStatic();
-
 	static CSingletonMode* getCallOnce();
+
+	static void destroyStatic();
 
 	static void RunCallOnce();
 

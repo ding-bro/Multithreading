@@ -521,9 +521,12 @@ void CMultithreading::ShowCallOnce(bool bIsThreadExecute /* = true */)
 	}
 }
 
+//#define THREADBLOCK
 void CMultithreading::ShowConditionVariable_Pushback()
 {
 	this->m_vctValue.clear();
+	this->m_listValue.clear();
+	this->m_iCount = 0;
 
 	for (int i = 0; i < 1000; i++)
 	{
@@ -531,12 +534,30 @@ void CMultithreading::ShowConditionVariable_Pushback()
 
 		this->m_vctValue.push_back(i);
 
-		this->m_ConVariable.notify_one();
+		// 如果不调用条件变量的notify，那么其他线程就会阻塞在wait方法
+		// 前提是这个wait方法在第一次执行的时候，方法返回的false，如果是true，那么第一次执行的时候就跳出去了
+#ifndef THREADBLOCK
+		this->m_ConVariable.notify_all();
+#endif
 	}
 }
 
-#define CONDITIONVARIABLEERROR
+void CMultithreading::ShowConditionVariable_Second()
+{
+	std::unique_lock<std::mutex>unLock(this->m_OneMutex);
 
+	this->m_ConVariable.wait(unLock, [=] {
+		if (this->m_vctValue.size() < 1000)
+		{
+			return true;
+		}
+
+		this->m_listValue.push_back(0);
+		return false;
+	});
+}
+
+#define CONDITIONVARIABLEERROR
 bool ShowConditionVariable_bool()
 {
 	return true;
@@ -547,7 +568,7 @@ void CMultithreading::ShowConditionVariable_Takeout()
 	std::unique_lock<std::mutex>unLock(this->m_OneMutex);
 
 	// std::condition_variable，第一个参数是unique_lock，第二个参数是函数指针或lambda
-	// 达到令线程阻塞的效果
+	// 达到令线程阻塞的效果，前提是没有调用notify方法
 
 #ifdef CONDITIONVARIABLEERROR
 	this->m_ConVariable.wait(unLock, [=] {
@@ -556,6 +577,7 @@ void CMultithreading::ShowConditionVariable_Takeout()
 			return false;
 		}
 
+		this->m_iCount = 1000;
 		return true;
 	});
 #else
@@ -564,6 +586,7 @@ void CMultithreading::ShowConditionVariable_Takeout()
 
 	std::cout << "finish" << endl;
 	std::cout << this->m_vctValue.at(999) << endl;
+	std::cout << this->m_iCount << endl;
 }
 
 void CMultithreading::ShowConditionVariable(bool bIsThreadExecute /* = true */)
@@ -571,9 +594,11 @@ void CMultithreading::ShowConditionVariable(bool bIsThreadExecute /* = true */)
 	if (bIsThreadExecute)
 	{
 		std::thread thOne(&CMultithreading::ShowConditionVariable_Pushback,this);
+		std::thread thThree(&CMultithreading::ShowConditionVariable_Second,this);
 		std::thread thTwo(&CMultithreading::ShowConditionVariable_Takeout,this);
 
 		thOne.join();
+		thThree.join();
 		thTwo.join();
 	}
 }

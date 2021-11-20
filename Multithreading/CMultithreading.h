@@ -64,6 +64,7 @@ public:
 	void ShowCallOnce(bool bIsThreadExecute = true);
 
 	void ShowConditionVariable_Pushback();
+	void ShowConditionVariable_Second();
 	void ShowConditionVariable_Takeout();
 	void ShowConditionVariable(bool bIsThreadExecute = true);
 
@@ -81,4 +82,6 @@ public:
 
 	list<int>m_listValue;
 	vector<int>m_vctValue;
+
+	int m_iCount;
 };
